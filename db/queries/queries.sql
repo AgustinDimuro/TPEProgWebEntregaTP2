@@ -1,7 +1,5 @@
--- db/queries.sql
--- Anotaciones para sqlc: https://sqlc.dev
+--                              CRUD de cabins
 
--- CRUD de cabins
 -- name: CreateCabin :one
 INSERT INTO cabins (email_contact, phone_contact, password)
 VALUES ($1, $2, $3)
@@ -24,12 +22,8 @@ RETURNING *;
 -- name: DeleteCabin :exec
 DELETE FROM cabins WHERE id = $1;
 
--- name: GetCabinForLogin :one
-SELECT id, password
-FROM cabins
-WHERE id = $1;
+--                          CRUD de reservations
 
--- CRUD de reservations (día completo, una por día)
 -- name: CreateReservation :one
 INSERT INTO reservations (cabin_id, fecha)
 VALUES ($1, $2)
@@ -68,6 +62,8 @@ RETURNING *;
 -- name: DeleteReservation :exec
 DELETE FROM reservations WHERE id = $1;
 
--- Auxiliares
+--                              Consultas
 -- name: IsFechaDisponible :one
-SELECT NOT EXISTS (SELECT 1 FROM reservations WHERE fecha = $1) AS disponible;
+SELECT NOT EXISTS (
+    SELECT 1 FROM reservations WHERE fecha = $1
+    ) AS disponible;

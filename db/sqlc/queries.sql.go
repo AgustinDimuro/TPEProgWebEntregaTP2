@@ -23,8 +23,6 @@ type CreateCabinParams struct {
 	Password     string `json:"password"`
 }
 
-// db/queries.sql
-// Anotaciones para sqlc: https://sqlc.dev
 // CRUD de cabins
 func (q *Queries) CreateCabin(ctx context.Context, arg CreateCabinParams) (Cabin, error) {
 	row := q.db.QueryRowContext(ctx, createCabin, arg.EmailContact, arg.PhoneContact, arg.Password)
@@ -40,6 +38,7 @@ func (q *Queries) CreateCabin(ctx context.Context, arg CreateCabinParams) (Cabin
 }
 
 const createReservation = `-- name: CreateReservation :one
+
 INSERT INTO reservations (cabin_id, fecha)
 VALUES ($1, $2)
 RETURNING id, cabin_id, fecha, created_at
@@ -50,7 +49,7 @@ type CreateReservationParams struct {
 	Fecha   time.Time `json:"fecha"`
 }
 
-// CRUD de reservations (día completo, una por día)
+// CRUD de reservations
 func (q *Queries) CreateReservation(ctx context.Context, arg CreateReservationParams) (Reservation, error) {
 	row := q.db.QueryRowContext(ctx, createReservation, arg.CabinID, arg.Fecha)
 	var i Reservation
@@ -98,24 +97,6 @@ func (q *Queries) GetCabin(ctx context.Context, id int32) (Cabin, error) {
 	return i, err
 }
 
-const getCabinForLogin = `-- name: GetCabinForLogin :one
-SELECT id, password
-FROM cabins
-WHERE id = $1
-`
-
-type GetCabinForLoginRow struct {
-	ID       int32  `json:"id"`
-	Password string `json:"password"`
-}
-
-func (q *Queries) GetCabinForLogin(ctx context.Context, id int32) (GetCabinForLoginRow, error) {
-	row := q.db.QueryRowContext(ctx, getCabinForLogin, id)
-	var i GetCabinForLoginRow
-	err := row.Scan(&i.ID, &i.Password)
-	return i, err
-}
-
 const getReservation = `-- name: GetReservation :one
 SELECT id, cabin_id, fecha, created_at FROM reservations WHERE id = $1
 `
@@ -149,10 +130,12 @@ func (q *Queries) GetReservationByFecha(ctx context.Context, fecha time.Time) (R
 }
 
 const isFechaDisponible = `-- name: IsFechaDisponible :one
-SELECT NOT EXISTS (SELECT 1 FROM reservations WHERE fecha = $1) AS disponible
+SELECT NOT EXISTS (
+    SELECT 1 FROM reservations WHERE fecha = $1
+    ) AS disponible
 `
 
-// Auxiliares
+// Consultas
 func (q *Queries) IsFechaDisponible(ctx context.Context, fecha time.Time) (bool, error) {
 	row := q.db.QueryRowContext(ctx, isFechaDisponible, fecha)
 	var disponible bool
