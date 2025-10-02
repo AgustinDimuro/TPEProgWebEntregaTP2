@@ -1,0 +1,12 @@
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  cmd = "make build"
+  bin = "mi-app"
+  full_bin = "APP_ENV=dev ./mi-app"
+  include_ext = ["go", "sql"]
+  exclude_dir = ["tmp", "vendor"]
+
+[run]
+  skip_init = true
