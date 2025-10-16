@@ -1,4 +1,4 @@
-module TPEProgWebEntregaTP2
+module tpeProgWeb
 
 go 1.22.2
 

@@ -1,10 +1,10 @@
 # Nombre del binario de la aplicación
 APP_NAME=mi-app
 
-# URL de la base de datos (coincide con las credenciales del docker run)
+# URL de la base de datos
 DB_URL="postgres://user:password@localhost:5432/TPEdb?sslmode=disable"
 
-# Target por defecto: compilar
+# Target por defecto
 all: build
 
 # Inicia el servidor con recarga automática usando Air
@@ -27,7 +27,17 @@ clean:
 
 # ---- DOCKER COMPOSE ----
 docker-up:
-	@docker compose up -d
+	@echo "=> Verificando estado del contenedor de la base..."
+	@if [ "$$(docker ps -q -f name=mydb)" ]; then \
+		echo "✅ Contenedor 'mydb' ya está corriendo."; \
+	elif [ "$$(docker ps -aq -f name=mydb)" ]; then \
+		echo "⚙️ Contenedor 'mydb' existe pero está detenido. Iniciando..."; \
+		docker start mydb >/dev/null; \
+	else \
+		echo "🚀 No existe contenedor, iniciando con docker compose..."; \
+		docker compose up -d; \
+	fi
+
 
 docker-down:
 	@docker compose down
@@ -35,12 +45,19 @@ docker-down:
 docker-logs:
 	@docker compose logs -f db
 
+wait-for-db: docker-up
+	@echo "=> Esperando que la base de datos esté lista..."
+	@until docker exec mydb pg_isready -U user -d TPEdb; do \
+		sleep 1; \
+	done
+	@echo "✅ Base de datos lista!"
+
+reset:
+	docker stop mydb
+	docker rm mydb
+
+
 # ---- FLUJO COMPLETO ----
-start:
-	@echo "🚀 Levantando Postgres con Docker..."
-	@docker compose up -d
-	@sleep 5 # esperar a que Postgres arranque
-	@echo "🔄 Generando código con sqlc..."
-	@sqlc generate
-	@echo "▶️ Ejecutando la aplicación..."
-	@go run main.go
+start: build wait-for-db 
+	@echo "=> Iniciando aplicación..."
+	@./$(APP_NAME)

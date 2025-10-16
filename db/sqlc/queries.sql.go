@@ -72,11 +72,17 @@ func (q *Queries) DeleteCabin(ctx context.Context, id int32) error {
 }
 
 const deleteReservation = `-- name: DeleteReservation :exec
-DELETE FROM reservations WHERE id = $1
+DELETE FROM reservations 
+WHERE cabin_id = $1 AND fecha = $2
 `
 
-func (q *Queries) DeleteReservation(ctx context.Context, id int32) error {
-	_, err := q.db.ExecContext(ctx, deleteReservation, id)
+type DeleteReservationParams struct {
+	CabinID int32     `json:"cabin_id"`
+	Fecha   time.Time `json:"fecha"`
+}
+
+func (q *Queries) DeleteReservation(ctx context.Context, arg DeleteReservationParams) error {
+	_, err := q.db.ExecContext(ctx, deleteReservation, arg.CabinID, arg.Fecha)
 	return err
 }
 
@@ -291,44 +297,21 @@ func (q *Queries) UpdateCabin(ctx context.Context, arg UpdateCabinParams) (Cabin
 	return i, err
 }
 
-const updateReservationCabin = `-- name: UpdateReservationCabin :one
+const updateReservation = `-- name: UpdateReservation :one
 UPDATE reservations
-SET cabin_id = $2
-WHERE id = $1
+SET fecha = COALESCE(NULLIF($3,''), fecha)
+WHERE cabin_id = $1 AND fecha = $2
 RETURNING id, cabin_id, fecha, created_at
 `
 
-type UpdateReservationCabinParams struct {
-	ID      int32 `json:"id"`
-	CabinID int32 `json:"cabin_id"`
+type UpdateReservationParams struct {
+	CabinID  int32       `json:"cabin_id"`
+	Fecha    time.Time   `json:"fecha"`
+	NewFecha interface{} `json:"NewFecha"`
 }
 
-func (q *Queries) UpdateReservationCabin(ctx context.Context, arg UpdateReservationCabinParams) (Reservation, error) {
-	row := q.db.QueryRowContext(ctx, updateReservationCabin, arg.ID, arg.CabinID)
-	var i Reservation
-	err := row.Scan(
-		&i.ID,
-		&i.CabinID,
-		&i.Fecha,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
-const updateReservationFecha = `-- name: UpdateReservationFecha :one
-UPDATE reservations
-SET fecha = $2
-WHERE id = $1
-RETURNING id, cabin_id, fecha, created_at
-`
-
-type UpdateReservationFechaParams struct {
-	ID    int32     `json:"id"`
-	Fecha time.Time `json:"fecha"`
-}
-
-func (q *Queries) UpdateReservationFecha(ctx context.Context, arg UpdateReservationFechaParams) (Reservation, error) {
-	row := q.db.QueryRowContext(ctx, updateReservationFecha, arg.ID, arg.Fecha)
+func (q *Queries) UpdateReservation(ctx context.Context, arg UpdateReservationParams) (Reservation, error) {
+	row := q.db.QueryRowContext(ctx, updateReservation, arg.CabinID, arg.Fecha, arg.NewFecha)
 	var i Reservation
 	err := row.Scan(
 		&i.ID,

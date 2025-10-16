@@ -47,20 +47,15 @@ SELECT * FROM reservations
 WHERE cabin_id = $1
 ORDER BY fecha DESC;
 
--- name: UpdateReservationCabin :one
+-- name: UpdateReservation :one
 UPDATE reservations
-SET cabin_id = $2
-WHERE id = $1
-RETURNING *;
-
--- name: UpdateReservationFecha :one
-UPDATE reservations
-SET fecha = $2
-WHERE id = $1
+SET fecha = COALESCE(NULLIF(sqlc.arg('NewFecha'),''), fecha)
+WHERE cabin_id = $1 AND fecha = $2
 RETURNING *;
 
 -- name: DeleteReservation :exec
-DELETE FROM reservations WHERE id = $1;
+DELETE FROM reservations 
+WHERE cabin_id = $1 AND fecha = $2;
 
 --                              Consultas
 -- name: IsFechaDisponible :one
